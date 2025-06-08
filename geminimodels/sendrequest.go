@@ -15,6 +15,8 @@ import (
 	geminiutilsetc "github.com/hend41234/gemini/geminiutils/etc"
 )
 
+var Resposne *ResModels
+
 func sendRequest(url string, body BaseRequestModel) bool {
 	byteBody, _ := json.Marshal(body)
 	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(byteBody))
@@ -27,14 +29,18 @@ func sendRequest(url string, body BaseRequestModel) bool {
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
 		readAll, _ := io.ReadAll(res.Body)
-		fmt.Println("response not 200")
 		res.Body.Close()
 		fmt.Println(string(readAll))
 		return false
 	}
-
-	readResp, _ := io.ReadAll(res.Body)
-	fmt.Println(string(readResp))
+	
+	Resposne = new(ResModels)
+	if err = json.NewDecoder(res.Body).Decode(&Resposne); err != nil {
+		fmt.Println(err)
+		return false
+	}
+	// readResp, _ := io.ReadAll(res.Body)
+	// fmt.Println(string(readResp))
 	return true
 }
 

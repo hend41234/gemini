@@ -11,6 +11,8 @@ import (
 //
 //	"zero-shoot" = (you can empty params) use the "FL")
 //
+// response saved in geminimodels.Response
+//
 //	"stream" = use "FLS"
 //
 // if you use stream mode you can use 1 more value, this "context".
@@ -24,7 +26,7 @@ import (
 //	"multi-turn" = use "FLSM"
 //
 //	'streaming mode still does not support media upload'
-func (reqConfig BaseRequestModel) Gemini2FL(mode ...string) {
+func (reqConfig BaseRequestModel) Gemini2FL(mode ...string) bool {
 	// byteConf, _ := json.Marshal(reqConfig)
 	var m string
 	if len(mode) > 0 {
@@ -47,17 +49,18 @@ func (reqConfig BaseRequestModel) Gemini2FL(mode ...string) {
 			sendingStream(url, reqConfig, save)
 		}
 	} else {
+		// fmt.Println("2FL")
 		m = "2FL" // default model
 		reqConfig.Contents[0].Role = nil
-
 		url := fmt.Sprintf("%v/%v%v",
 			geminiutils.Utils.BaseURL,
 			geminiutils.Utils.Endpoint[m],
 			geminiutils.Utils.GeminiApiKey,
 		)
 		send := sendRequest(url, reqConfig)
-		fmt.Println(send)
+		return send
 	}
+	return false
 }
 
 // func (reqConfig BaseRequestModel) Gemini2FLStream() {
