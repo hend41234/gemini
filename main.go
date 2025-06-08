@@ -1,14 +1,10 @@
 package main
 
-import (
-	"github.com/hend41234/gemini/geminimodels"
-)
+import "github.com/hend41234/gemini/geminimodels"
 
 func main() {
+	// sample Streaming Multimodial
 	geminimodels.QuickGenerateConfigRequest("bro, whats up!")
-	geminimodels.ConfigRequest.Gemini2FL("FLS", "n")
-
-	// fmt.Println(resModel.Candidates[0].Contents.Parts[0].Text)
-	// fmt.Println(resModel.GetUsageMetadata())
+	geminimodels.ConfigRequest.Gemini2FL("FLS", "s")
 
 }

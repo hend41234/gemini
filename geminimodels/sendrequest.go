@@ -25,8 +25,6 @@ func sendRequest(url string, body BaseRequestModel) bool {
 		return false
 	}
 	defer res.Body.Close()
-	// fmt.Println(url)
-	// fmt.Println(string(byteBody))
 	if res.StatusCode != 200 {
 		readAll, _ := io.ReadAll(res.Body)
 		fmt.Println("response not 200")
@@ -41,22 +39,20 @@ func sendRequest(url string, body BaseRequestModel) bool {
 }
 
 func sendingStream(url string, bodyConf BaseRequestModel, saveContext bool) {
-	// printed := fmt.Sprintf("[ %v ]===>  %v", *bodyConf.Contents[0].Role, bodyConf.Contents[0].Parts[0].Text)
-	// fmt.Println(printed)
 	IDChat := geminiutilsetc.NewUUID()
-	if ok := saveContexts(bodyConf, IDChat); !ok {
-		log.Fatal("error")
-	}
+	// if ok := saveContexts(bodyConf, IDChat); !ok {
+	// 	log.Fatal("error")
+	// }
 	input := bufio.NewScanner(os.Stdin)
 	fmt.Print("[ user ]===> ")
 	input.Scan()
 
 	bodyConf.Contents[0].Parts[0].Text = input.Text()
+	contextSaved := false
 	for {
 		byteBody, _ := json.Marshal(bodyConf)
 		newReq, _ := http.NewRequest("POST", url, bytes.NewBuffer(byteBody))
 		newReq.Header.Set("Content-Type", "application/json")
-		fmt.Println(string(byteBody))
 		client := http.Client{}
 		res, err := client.Do(newReq)
 		if err != nil {
@@ -72,6 +68,20 @@ func sendingStream(url string, bodyConf BaseRequestModel, saveContext bool) {
 			continue
 		}
 		defer res.Body.Close()
+		{
+			if !contextSaved {
+				var title string
+				if len(bodyConf.Contents[0].Parts[0].Text) > 100 {
+					title = bodyConf.Contents[0].Parts[0].Text[:100]
+				} else {
+					title = bodyConf.Contents[0].Parts[0].Text
+				}
+				if ok := geminiutilsetc.AddListOfContext(IDChat, title); !ok {
+					log.Println("error add list of context")
+				}
+			}
+			contextSaved = true
+		}
 
 		var responseContent string = ""
 		var newModelContent Content
@@ -101,10 +111,11 @@ func sendingStream(url string, bodyConf BaseRequestModel, saveContext bool) {
 		}
 		newModelContent.Parts[0].Text = responseContent // this result Content from SSE / chunk
 
-		//  printed model AI
-		// printed = fmt.Sprintf("[ %v ]===> %v", *newModelContent.Role, responseContent)
-		// fmt.Println(printed)
 		bodyConf.Contents = append(bodyConf.Contents, newModelContent) // save response from model gemini
+		// save after model reply
+		if ok := saveContexts(bodyConf, IDChat); !ok {
+			log.Fatal("error save context")
+		}
 
 		var newContent Content
 		fmt.Print("[ user ]===> ")
@@ -127,14 +138,34 @@ func sendingStream(url string, bodyConf BaseRequestModel, saveContext bool) {
 			bodyConf.Contents = []Content{newContent}
 		}
 
+		// save history
 		if ok := saveContexts(bodyConf, IDChat); !ok {
 			log.Fatal("error save context")
 		}
-		// fmt.Println("______________________________________________________________________________________________")
 	}
 
 }
 
 func saveContexts(body BaseRequestModel, IDChat string) bool {
-	return true
+	dir := "data/history/"
+	nameFile := fmt.Sprintf("%v%v.json", dir, IDChat)
+	byteData, err := json.Marshal(body)
+	if err != nil {
+		log.Println("error encode chat")
+		return false
+	}
+	{
+		_, err := os.Stat("data/history")
+		if os.IsNotExist(err) {
+			if err := os.Mkdir("data/history", 0755); err != nil {
+				log.Println("error create directory data/history")
+				return false
+			}
+		}
+
+	}
+	// fmt.Println(IDChat)
+
+	ok := geminiutilsetc.SaveFile(nameFile, byteData)
+	return ok
 }
